@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Video Player dengan Thumbnail</title>
+  <style>
+    body::before {
+      content: "";
+      position: fixed;
+      left: 0;
+      right: 0;
+      top: 0;
+      bottom: 0;
+      z-index: -1;
+      background-image: url('background.png');
+      background-size: cover;
+      background-position: center;
+      background-repeat: no-repeat;
+      filter: brightness(0.3);
+    }
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #111;
+      color: #fff;
+      margin: 0;
+      padding: 20px;
+      padding-bottom: 80px;
+    }
+    h1 {
+      text-align: center;
+      color: #ff4444;
+      text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+    }
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
+    }
+    input, button {
+      padding: 10px;
+      margin: 5px 0;
+      border-radius: 5px;
+      border: none;
+    }
+    input {
+      flex: 1 1 200px;
+      background-color: rgba(255, 255, 255, 0.9);
+      color: #000;
+    }
+    button {
+      cursor: pointer;
+      flex-grow: 1;
+      color: white;
+    }
+    .main-action { background-color: #44aaff; }
+    .export-action { background-color: #22aa77; }
+    .import-action { background-color: #ffaa00; }
+    video {
+      display: block;
+      margin: 20px auto;
+      max-width: 100%;
+      background: #000;
+      border: 2px solid rgba(255,255,255,0.1);
+      border-radius: 5px;
+    }
+    .playlist { margin-top: 20px; }
+    .playlist-item {
+      display: flex;
+      align-items: center;
+      padding: 10px;
+      background: rgba(0, 0, 0, 0.5);
+      backdrop-filter: blur(5px);
+      -webkit-backdrop-filter: blur(5px);
+      margin: 8px 0;
+      border-radius: 5px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      gap: 15px;
+    }
+    .playlist-thumbnail {
+      width: 120px;
+      height: 70px;
+      object-fit: cover;
+      border-radius: 4px;
+      background-color: #333;
+      flex-shrink: 0;
+    }
+    .playlist-text { flex: 1; overflow: hidden; }
+    .playlist-text span {
+      cursor: pointer;
+      font-size: 16px;
+    }
+    .actions button {
+      margin-left: 5px;
+      background: #ff4444;
+      padding: 5px 8px;
+    }
+    .actions .edit { background: #ffaa00; }
+    footer {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      text-align: center;
+      padding: 15px 0;
+      background-color: rgba(0, 0, 0, 0.7);
+      color: rgba(255, 255, 255, 0.5);
+      font-size: 14px;
+      backdrop-filter: blur(5px);
+      -webkit-backdrop-filter: blur(5px);
+    }
+    #hidden-video-container { display: none; }
+  </style>
+</head>
+<body>
+
+  <h1>🎬 Pemutar Video</h1>
+
+  <div class="controls">
+    <input type="text" id="videoUrl" placeholder="Tulis URL video">
+    <input type="text" id="subtitleUrl" placeholder="Tulis URL subtitle (bisa kosong)">
+  </div>
+  <div class="controls">
+    <button class="main-action" onclick="addPlaylist()">Tambah playlist</button>
+    <button class="export-action" onclick="exportPlaylist()">Ekspor playlist</button>
+    <button class="import-action" onclick="importPlaylist()">Impor Playlist</button>
+  </div>
+  
+  <input type="file" id="importFile" style="display: none;" accept=".json" onchange="handleFileSelect(event)">
+
+  <video id="player" controls>
+    <track id="subtitleTrack" kind="subtitles" srclang="id" label="Indonesia">
+  </video>
+
+  <div class="playlist" id="playlist"></div>
+
+  <!-- Dua tombol baru untuk memuat config JSON -->
+  <div style="text-align:center; margin-top:20px;">
+    <button onclick="loadFromJsonFolder()" style="background:#4caf50;color:white;padding:10px 15px;border:none;border-radius:5px;cursor:pointer;margin-right:5px;">
+      Movie
+    </button>
+    <button onclick="loadFromJsonUrl()" style="background:#66bb6a;color:white;padding:10px 15px;border:none;border-radius:5px;cursor:pointer;">
+      Movie+
+    </button>
+  </div>
+
+  <div id="hidden-video-container"></div> 
+  <footer>Powered by meekymouse inside</footer>
+
+  <script>
+    let playlists = [];
+
+    const CONFIG_FILE = "movie.json"; // File
+    const CONFIG_FILE = "movie+.json"; // File
+
+    const defaultPlaylist = [
+      { url: "https://1hyahuwewhyvwmq.acek-cdn.com/hls2/01/02451/4sxfsrs7sk6s_,l,n,h,.urlset/index-f2-v1-a1.m3u8?t=ex1wnilw5A8Y4u9j0n3goPDR-Rje6a9qtgizVU50wwY&s=1754890895&e=129600&f=25487350&srv=N9AMlcuPtQ8N&i=0.4&sp=500&p1=N9AMlcuPtQ8N&p2=N9AMlcuPtQ8N&asn=4761", subtitle: "", title: "Terrifier 3 (2024)", thumbnail: null },
+      { url: "https://rnzt2t4xvku08.acek-cdn.com/hls2/01/02437/3ov3nqcwuizn_,l,n,.urlset/index-f2-v1-a1.m3u8?t=t-EjHZF6NwJMKbiOjQ878vx1kwxly54KZt3B_tK6-s8&s=1754892466&e=129600&f=12223073&srv=5TICbOQKpSaA&i=0.4&sp=500&p1=5TICbOQKpSaA&p2=5TICbOQKpSaA&asn=4761", subtitle: "", title: "Deadpool & Wolverine (2024)", thumbnail: null }
+    ];
+
+    function loadPlaylist() {
+      const saved = localStorage.getItem("videoPlaylist");
+      playlists = saved ? JSON.parse(saved) : defaultPlaylist;
+      playlists.forEach(item => { if (item.thumbnail === undefined) item.thumbnail = null; });
+      renderPlaylist();
+    }
+
+    function savePlaylist() {
+      localStorage.setItem("videoPlaylist", JSON.stringify(playlists));
+    }
+
+    function renderPlaylist() {
+      const container = document.getElementById("playlist");
+      container.innerHTML = "";
+      playlists.forEach((item, index) => {
+        const div = document.createElement("div");
+        div.className = "playlist-item";
+        let thumbSrc = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
+        if (item.thumbnail && item.thumbnail !== 'failed') thumbSrc = item.thumbnail;
+        div.innerHTML = `
+          <img id="thumb-${index}" class="playlist-thumbnail" src="${thumbSrc}" alt="Thumbnail ${item.title}">
+          <div class="playlist-text">
+            <span onclick="playVideo(${index})">${item.title}</span>
+          </div>
+          <div class="actions">
+            <button class="edit" onclick="editPlaylist(${index})">Edit</button>
+            <button onclick="deletePlaylist(${index})">Hapus</button>
+          </div>
+        `;
+        container.appendChild(div);
+        if (item.thumbnail === null) generateThumbnail(index);
+      });
+    }
+
+    function playVideo(index) {
+      const player = document.getElementById("player");
+      const track = document.getElementById("subtitleTrack");
+      player.src = playlists[index].url;
+      track.src = playlists[index].subtitle;
+      player.load();
+      player.play();
+    }
+
+    function addPlaylist() {
+      const url = document.getElementById("videoUrl").value.trim();
+      const sub = document.getElementById("subtitleUrl").value.trim();
+      if (!url) return alert("URL video tidak boleh kosong!");
+      const title = prompt("Masukkan judul video:", `Video Baru ${playlists.length + 1}`);
+      if (title) {
+        playlists.push({ url, subtitle: sub, title, thumbnail: null });
+        savePlaylist();
+        renderPlaylist();
+        document.getElementById("videoUrl").value = "";
+        document.getElementById("subtitleUrl").value = "";
+      }
+    }
+
+    function editPlaylist(index) {
+      const item = playlists[index];
+      const newTitle = prompt("Edit judul video:", item.title);
+      if (newTitle === null) return;
+      const newUrl = prompt("Edit URL video:", item.url);
+      if (newUrl === null) return;
+      const newSub = prompt("Edit URL subtitle:", item.subtitle);
+      if (newSub === null) return;
+      const currentThumbUrl = (item.thumbnail && item.thumbnail.startsWith('http')) ? item.thumbnail : "";
+      const newThumb = prompt("Edit URL thumbnail (kosongkan untuk coba buat otomatis):", currentThumbUrl);
+      if (newThumb === null) return;
+      if (newUrl.trim()) {
+        item.title = newTitle || item.title;
+        item.url = newUrl;
+        item.subtitle = newSub || "";
+        item.thumbnail = newThumb.trim() || null;
+        savePlaylist();
+        renderPlaylist();
+      } else {
+        alert("URL video baru tidak boleh kosong!");
+      }
+    }
+
+    function deletePlaylist(index) {
+      if (confirm("Anda yakin ingin menghapus video ini dari playlist?")) {
+        playlists.splice(index, 1);
+        savePlaylist();
+        renderPlaylist();
+      }
+    }
+
+    function generateThumbnail(index) {
+      const item = playlists[index];
+      if (!item || !item.url) return;
+      const video = document.createElement('video');
+      video.crossOrigin = 'anonymous';
+      const cleanup = () => {
+        video.removeEventListener('seeked', onSeeked);
+        video.removeEventListener('error', onError);
+        video.remove();
+      };
+      const onSeeked = () => {
+        const canvas = document.createElement('canvas');
+        const aspectRatio = video.videoWidth / video.videoHeight;
+        canvas.width = 120;
+        canvas.height = 120 / aspectRatio;
+        const ctx = canvas.getContext('2d');
+        try {
+          ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+          const dataUrl = canvas.toDataURL('image/jpeg');
+          playlists[index].thumbnail = dataUrl;
+          const imgElement = document.getElementById(`thumb-${index}`);
+          if (imgElement) imgElement.src = dataUrl;
+          savePlaylist();
+        } catch (e) {
+          playlists[index].thumbnail = 'failed';
+          savePlaylist();
+        }
+        cleanup();
+      };
+      const onError = () => {
+        playlists[index].thumbnail = 'failed';
+        savePlaylist();
+        cleanup();
+      };
+      video.addEventListener('seeked', onSeeked, { once: true });
+      video.addEventListener('error', onError, { once: true });
+      video.addEventListener('loadeddata', () => { video.currentTime = 1; }, { once: true });
+      video.src = item.url;
+      video.muted = true;
+      video.preload = 'metadata';
+      document.getElementById('hidden-video-container').appendChild(video);
+    }
+
+    function exportPlaylist() {
+      if (playlists.length === 0) return alert("Playlist kosong.");
+      const dataStr = JSON.stringify(playlists, null, 2);
+      const blob = new Blob([dataStr], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "playlist.json";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+
+    function importPlaylist() {
+      document.getElementById('importFile').click();
+    }
+
+    function handleFileSelect(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        try {
+          const importedData = JSON.parse(e.target.result);
+          if (Array.isArray(importedData)) {
+            if (confirm("Ini akan menimpa playlist saat ini. Lanjutkan?")) {
+              playlists = importedData.map(item => ({ ...item, thumbnail: item.thumbnail ?? null }));
+              savePlaylist();
+              renderPlaylist();
+              alert("Playlist berhasil diimpor!");
+            }
+          } else alert("Format JSON tidak valid.");
+        } catch {
+          alert("Gagal membaca file JSON.");
+        }
+      };
+      reader.readAsText(file);
+      event.target.value = null; 
+    }
+
+    function loadFromJsonFolder() {
+      fetch(CONFIG_FOLDER)
+        .then(res => {
+          if (!res.ok) throw new Error("Gagal mengambil file JSON dari folder.");
+          return res.json();
+        })
+        .then(data => {
+          if (Array.isArray(data)) {
+            playlists = data.map(item => ({
+              url: item.url || "",
+              subtitle: item.subtitle || "",
+              title: item.title || "Tanpa Judul",
+              thumbnail: item.thumbnail !== undefined ? item.thumbnail : null
+            }));
+            savePlaylist();
+            renderPlaylist();
+            alert("Playlist berhasil dimuat dari folder!");
+          } else {
+            alert("Format JSON tidak valid.");
+          }
+        })
+        .catch(() => alert("Terjadi kesalahan saat memuat config dari folder."));
+    }
+
+    function loadFromJsonUrl() {
+      fetch(CONFIG_URL)
+        .then(res => {
+          if (!res.ok) throw new Error("Gagal mengambil file JSON dari URL.");
+          return res.json();
+        })
+        .then(data => {
+          if (Array.isArray(data)) {
+            playlists = data.map(item => ({
+              url: item.url || "",
+              subtitle: item.subtitle || "",
+              title: item.title || "Tanpa Judul",
+              thumbnail: item.thumbnail !== undefined ? item.thumbnail : null
+            }));
+            savePlaylist();
+            renderPlaylist();
+            alert("Playlist berhasil dimuat dari URL!");
+          } else {
+            alert("Format JSON tidak valid.");
+          }
+        })
+        .catch(() => alert("Terjadi kesalahan saat memuat config dari URL."));
+    }
+
+    loadPlaylist();
+  </script>
+
+</body>
+</html>
