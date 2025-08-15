@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>🎬 Pemutar Video dengan Playlist & Thumbnail</title>
+  <title>🎬 Streaming Video</title>
   <style>
     /* Background foto + overlay gelap agar teks terbaca */
     body::before {
@@ -163,21 +163,21 @@
 </head>
 <body>
 
-  <h1>🎬 Pemutar Video</h1>
+  <h1>🎬 Streaming Video</h1>
 
   <!-- Input URL Video & Subtitle -->
   <div class="inputs">
-    <input type="text" id="videoUrl" placeholder="Tulis URL video (MP4/HLS .m3u8)">
-    <input type="text" id="subtitleUrl" placeholder="Tulis URL subtitle (.vtt / .srt) — bisa kosong">
+    <input type="text" id="videoUrl" placeholder="Tulis URL vidio">
+    <input type="text" id="subtitleUrl" placeholder="Tulis URL subtitle ( opsional)">
   </div>
 
   <!-- Tombol-tombol utama -->
   <div class="controls">
-    <button class="btn-primary" onclick="addPlaylist()">Tambah Playlist</button>
-    <button class="btn-export"  onclick="exportPlaylist()">Ekspor Playlist</button>
-    <button class="btn-import"  onclick="importPlaylist()">Impor Playlist</button>
-    <button class="btn-folder"  onclick="loadFromJsonFolder()">Muat Config (Folder)</button>
-    <button class="btn-url"     onclick="loadFromJsonUrl()">Muat Config (URL)</button>
+    <button class="btn-primary" onclick="addPlaylist()">Add Vidio</button>
+    <button class="btn-export"  onclick="exportPlaylist()">Unduh Playlist</button>
+    <button class="btn-import"  onclick="importPlaylist()">Ambil Playlist</button>
+    <button class="btn-folder"  onclick="loadFromJsonFolder()">Movie</button>
+    <button class="btn-url"     onclick="loadFromJsonUrl()">Movie(Dewasa)</button>
   </div>
 
   <input type="file" id="importFile" style="display:none;" accept=".json" onchange="handleFileSelect(event)">
@@ -195,7 +195,7 @@
     /* ================== KONFIGURASI ================== */
     // Ganti sesuai lokasi JSON-mu:
     const CONFIG_FOLDER = "movie.json"; // file JSON di folder yang sama (GitHub Pages / server lokal)
-    const CONFIG_URL    = "https://example.com/movie.json"; // URL JSON (GitHub Raw/hosting)
+    const CONFIG_URL    = "https://github.com/joker63-in/Vidio-2.3.3/blob/b2ba5da5b6fd96887596423f7f4e1bd8ad7df8b0/movie%2B.json"; // URL JSON (GitHub Raw/hosting)
 
     /* ================== STATE & DEFAULTS ================== */
     let playlists = [];
